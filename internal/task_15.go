@@ -1,28 +1,26 @@
 package internal
 
+import (
+	"fmt"
+	"strings"
+)
+
+func createHugeString(size int) string {
+	var result strings.Builder
+	for i := 0; i < size; i++ {
+		result.WriteRune(' ') // Добавляем пробел в строку
+	}
+	return result.String()
+}
+
 var justString string
 
 func someFunc() {
-	v := createHugeString(1 << 10)
-	justString = makeCopy(v[:100]) // Создаем копию подстроки и сохраняем ее в justString
+	v := createHugeString(1000)
+	justString = v[:100]
 }
 
 func Task15() {
 	someFunc()
-}
-
-// createHugeString возвращает большую строку
-func createHugeString(size int) string {
-	// Ваша реализация createHugeString
-	return "huge_string_content"
-}
-
-// makeCopy создает копию строки
-func makeCopy(s string) string {
-	// Создаем новую строку той же длины, что и s
-	copyStr := make([]byte, len(s))
-	// Копируем содержимое строки s в новую строку copyStr
-	copy(copyStr, s)
-	// Возвращаем копию строки в виде string
-	return string(copyStr)
+	fmt.Println(justString)
 }

@@ -1,63 +1,64 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
 )
 
-func worker1(wg *sync.WaitGroup, quit chan struct{}) {
-	defer wg.Done()
-	for {
-		select {
-		case <-quit:
-			fmt.Println("Горутина 1 получила сигнал выхода")
-			return
-		default:
-			fmt.Println("Горутина 1 работает")
-			time.Sleep(500 * time.Millisecond)
-		}
-	}
-}
-
-func worker2(wg *sync.WaitGroup, stop chan bool) {
-	defer wg.Done()
-	for {
-		select {
-		case <-stop:
-			fmt.Println("Горутина 2 получила сигнал остановки")
-			return
-		default:
-			fmt.Println("Горутина 2 работает")
-			time.Sleep(500 * time.Millisecond)
-		}
-	}
-}
-
 func Task6() {
+	// Используем канал для сигнализации о завершении
+	done := make(chan bool)
+	go func() {
+		defer close(done)
+		fmt.Println("Горутина 1 начала выполнение")
+		time.Sleep(2 * time.Second)
+		fmt.Println("Горутина 1 завершила выполнение")
+	}()
+
+	// Используем контекст для отмены выполнения
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		defer cancel()
+		fmt.Println("Горутина 2 начала выполнение")
+		select {
+		case <-time.After(3 * time.Second):
+			fmt.Println("Горутина 2 завершила выполнение")
+		case <-ctx.Done():
+			fmt.Println("Горутина 2 была остановлена")
+		}
+	}()
+
+	// Используем мьютекс и переменную состояния для управления выполнением
 	var wg sync.WaitGroup
-
-	// Пример с использованием канала с типом struct{}
-	quit := make(chan struct{})
+	stop := false
 	wg.Add(1)
 	go func() {
-		defer close(quit)
-		defer fmt.Println("Goroutine 1 stopped")
-		worker1(&wg, quit)
-	}()
-
-	// Пример с использованием канала с типом bool
-	stop := make(chan bool)
-	wg.Add(1)
-	go func() {
-		defer fmt.Println("Goroutine 2 stopped")
 		defer wg.Done()
-		worker2(&wg, stop)
+		fmt.Println("Горутина 3 начала выполнение")
+		for {
+			if stop {
+				break
+			}
+			time.Sleep(1 * time.Second)
+		}
+		fmt.Println("Горутина 3 завершила выполнение")
 	}()
 
-	// Пример с использованием ожидания группы горутин с таймаутом
-	time.Sleep(3 * time.Second) // Подождем некоторое время
-	fmt.Println("Главная горутина ждет окончание остальных...")
-	wg.Wait() // Ожидание завершения всех горутин
-	fmt.Println("Все горутины остановлены")
+	// Ждем некоторое время, затем останавливаем горутины
+	time.Sleep(2 * time.Second)
+	fmt.Println("Останавливаем горутины...")
+
+	// Остановка первой горутины через канал
+	<-done
+
+	// Отмена выполнения второй горутины через контекст
+	cancel()
+
+	// Остановка третьей горутины через мьютекс и переменную состояния
+	stop = true
+	wg.Wait()
+
+	fmt.Println("Основная горутина завершила выполнение")
 }
